@@ -24,14 +24,14 @@ public class TrackReducer implements ReducerAggregator<Map<String, Object>>{
 
     public Map<String, Object> reduce(Map<String, Object> trackObject, TridentTuple tuple) {
         if(trackObject == null){
-            System.out.println("Input track object is null");
+            //System.out.println("Input track object is null");
             trackObject = new HashMap<String,Object>();
         }
         
-        System.out.println("Tuple size: "+tuple.size());
-        for(int i = 0; i < tuple.size(); i++){
-            System.out.println("Tuple index "+i+": "+tuple.get(i).toString());
-        }
+//        System.out.println("Tuple size: "+tuple.size());
+//        for(int i = 0; i < tuple.size(); i++){
+//            System.out.println("Tuple index "+i+": "+tuple.get(i).toString());
+//        }
         Map<String,Object> event = (Map<String,Object>)tuple.get(0);
         GroupByField trackId = (GroupByField) tuple.get(1);
         

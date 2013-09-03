@@ -60,10 +60,12 @@ public class QueryFilterer extends BaseFunction {
                     log.debug("Reinitialized groovy engine");
                 }
             }
-            Map<String, Object> event = (Map<String, Object>) tuple.get(0);
+            Map<String, Object> eventOrig = (Map<String, Object>) tuple.get(0);
+            Map<String,Object> event = new HashMap<String,Object>();
+            event.putAll(eventOrig);
             Bindings bindings = engine.createBindings();
             for (String key : event.keySet()) {
-                //System.out.println("Populating binding with: "+key+" = "+event.get(key));
+                //log.debug("Populating binding with: "+key+" = "+event.get(key));
                 bindings.put(key, event.get(key));
             }
 
@@ -72,17 +74,17 @@ public class QueryFilterer extends BaseFunction {
                 try {
 
                     //query = "passedQuery = " + query;
-                    //System.out.println("Evaluating query: " + tally.getQuery());
+                    //log.debug("Evaluating query: " + tally.getQuery());
 //                    boolean passedQuery = false;
 //                    bindings.put("passedQuery", passedQuery);
                     Object o = engine.eval(tally.getQuery(), bindings);
                     Boolean passedQuery = (Boolean)o;
-//                    System.out.println("Eval result: "+o.toString());
-//                    System.out.println("passedQuery = " + passedQuery + " after eval");
+//                    log.debug("Eval result: "+o.toString());
+//                    log.debug("passedQuery = " + passedQuery + " after eval");
 //                    passedQuery = (Boolean) bindings.get("passedQuery");
                     if (passedQuery) {
                         log.trace("Event passed " + tallyName + " event: " + event.toString());
-                        event.put("OBJECT_IDENTIFIER", tallyName);
+//                        event.put("OBJECT_IDENTIFIER", tallyName);
                         Long time = (Long)event.get("TIME");
                         Long bin = time - (time % timeBin);
                         List<Object> emitValues = new ArrayList<Object>();
@@ -94,7 +96,7 @@ public class QueryFilterer extends BaseFunction {
                         emitValues.add(timeBinGroupField);
                         collector.emit(emitValues);
                     } else {
-                       // System.out.println("Event failed " + tallyName + " event: " + event.toString());
+                       // log.debug("Event failed " + tallyName + " event: " + event.toString());
                     }
                 } catch (Exception e) {
                     log.error("Error with groovy script", e);
@@ -106,7 +108,7 @@ public class QueryFilterer extends BaseFunction {
     }
 
     private void loadQueries() {
-        System.out.println("Loading queries");
+        log.debug("Loading queries");
         GraphQuery query = this.graph.getGraph().query();
         query.has("OBJECT_TYPE", "TALLY_DEFINITION");
         Iterable<Vertex> vertices = query.vertices();
@@ -115,7 +117,7 @@ public class QueryFilterer extends BaseFunction {
             String tallyQuery = v.getProperty("tallyQuery");
             List<String> tallyFields = v.getProperty("tallyFields");
             Tally tally = new Tally(tallyName,tallyQuery,tallyFields);
-            System.out.println("Loaded " + tallyName + " with query: " + tallyQuery);
+            log.debug("Loaded " + tallyName + " with query: " + tallyQuery);
             this.tallyMap.put(tallyName, tally);
         }
         closeIterable(vertices);
@@ -146,7 +148,7 @@ public class QueryFilterer extends BaseFunction {
         }
         try {
             Object o = engine.eval(query1, binding);
-            System.out.println("Engine eval = " + o.toString());
+            log.debug("Engine eval = " + o.toString());
         } catch (Exception e) {
             e.printStackTrace();
         }
