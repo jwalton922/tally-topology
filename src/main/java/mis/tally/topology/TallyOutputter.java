@@ -22,20 +22,24 @@ public class TallyOutputter extends BaseFunction {
     private static Logger log = Logger.getLogger(TallyOutputter.class);
 
     public void execute(TridentTuple tuple, TridentCollector collector) {
+       
         List<Map<String, Object>> tallyCounts = (List) tuple.get(0);
         Long queryTime = (Long) tuple.get(1);
+         log.info("TallyOutputter.execute called. Query time: "+queryTime);
         List<Map<String,Object>> filteredCounts = new ArrayList<Map<String,Object>>();
         for (int i = 0; i < tallyCounts.size(); i++) {
             Map<String, Object> tallyCount = tallyCounts.get(i);
             if (tallyCount == null) {
+                log.info("null tally count!");
                 continue;
             }
 
             Long tallyTimeBin = (Long) tallyCount.get("TIME_BIN");
-            if (tallyTimeBin > queryTime) {
+            if (tallyTimeBin >= queryTime) {
+                log.info(tallyTimeBin +" >= "+queryTime);
                 filteredCounts.add(tallyCount);
                 for (String key : tallyCount.keySet()) {
-                    log.debug("Tally count key: " + key + " value = " + tallyCount.get(key));
+                    log.info("Tally count key: " + key + " value = " + tallyCount.get(key));
                 }
             }
         }

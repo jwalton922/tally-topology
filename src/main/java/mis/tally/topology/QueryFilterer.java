@@ -4,7 +4,6 @@
  */
 package mis.tally.topology;
 
-import backtype.storm.tuple.Values;
 import com.tinkerpop.blueprints.CloseableIterable;
 import com.tinkerpop.blueprints.GraphQuery;
 import com.tinkerpop.blueprints.Vertex;

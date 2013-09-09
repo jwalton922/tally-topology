@@ -21,7 +21,7 @@ public class ObjectTypeQueryProcessor extends BaseFunction{
     
     public void execute(TridentTuple tuple, TridentCollector collector) {
         String objectType = tuple.getString(0);
-        log.debug("ObjectTypeQueryProcessor emitting query for objects of type: "+objectType);
+        log.info("ObjectTypeQueryProcessor emitting query for objects of type: "+objectType);
         
         collector.emit(new Values(new GroupByField("OBJECT_TYPE", objectType)));
         
