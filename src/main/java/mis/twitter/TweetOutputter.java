@@ -47,34 +47,40 @@ public class TweetOutputter extends BaseFunction {
             byte[] messageBytes = (byte[]) tuple.get(0);
             String messageString = new String(messageBytes);
             System.out.println("flight delay tweet: " + messageString);
-            Jedis jedis = jedisPool.getResource();
-            Long numClients = jedis.publish("FLIGHT_DELAY_TWEET", messageString);
-            jedisPool.returnResource(jedis);
+
             try {
                 JSONObject json = new JSONObject(messageString);
                 System.out.println("Created json object");
-                Iterator keyIt = json.keys();
-                while (keyIt.hasNext()) {
-                    String key = (String) keyIt.next();
-                    Object value = json.get(key);
-                    if (value instanceof JSONArray) {
-                        JSONArray valueArray = (JSONArray) value;
-                        List<Object> valueList = new ArrayList<Object>();
-                        Map<String, Object> innerMap = new HashMap<String, Object>();
-                        for (int i = 0; i < valueArray.length(); i++) {
-                            JSONObject listObject = valueArray.getJSONObject(i);
-                            Iterator innerKeyIt = listObject.keys();
-                            while (innerKeyIt.hasNext()) {
-                                String innerKey = (String) innerKeyIt.next();
-                                Object innerValue = listObject.get(innerKey);
-                                innerMap.put(innerKey, innerValue);
-                            }
-                            valueList.add(innerMap);
-                        }
-
-                        value = valueList;
-                    }
+                String text = json.getString("tweet_text").toLowerCase();
+                if (text.indexOf("flight") >= 0) {
+                    Jedis jedis = jedisPool.getResource();
+                    Long numClients = jedis.publish("FLIGHT_DELAY_TWEET", messageString);
+                    jedisPool.returnResource(jedis);
+                } else {
+                    log.info("Tweet was not about flight delay");
                 }
+//                Iterator keyIt = json.keys();
+//                while (keyIt.hasNext()) {
+//                    String key = (String) keyIt.next();
+//                    Object value = json.get(key);
+//                    if (value instanceof JSONArray) {
+//                        JSONArray valueArray = (JSONArray) value;
+//                        List<Object> valueList = new ArrayList<Object>();
+//                        Map<String, Object> innerMap = new HashMap<String, Object>();
+//                        for (int i = 0; i < valueArray.length(); i++) {
+//                            JSONObject listObject = valueArray.getJSONObject(i);
+//                            Iterator innerKeyIt = listObject.keys();
+//                            while (innerKeyIt.hasNext()) {
+//                                String innerKey = (String) innerKeyIt.next();
+//                                Object innerValue = listObject.get(innerKey);
+//                                innerMap.put(innerKey, innerValue);
+//                            }
+//                            valueList.add(innerMap);
+//                        }
+//
+//                        value = valueList;
+//                    }
+//                }
             } catch (Exception e) {
                 System.out.println("Error parsing json from tweet object");
                 log.error(e);

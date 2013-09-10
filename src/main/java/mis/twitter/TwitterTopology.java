@@ -50,7 +50,7 @@ public class TwitterTopology {
         
         
         
-        stream.each(eventSpout.getOutputFields(), new TweetOutputter(), new Fields("tweet")).parallelismHint(1);
+        stream.each(eventSpout.getOutputFields(), new TweetOutputter(), new Fields("tweet")).parallelismHint(3);
 //                .groupBy(new Fields("trackid", "objectType")).persistentAggregate(factory, new Fields("event", "trackid", "eventuuid"), new TrackReducer(), new Fields()).parallelismHint(1);
         
 //        tridentTopology.newDRPCStream("trackQuery").each(new Fields("args"), new ObjectTypeQueryProcessor(), new Fields("objectType")).groupBy(new Fields("objectType")).stateQuery(state, new Fields("objectType"), new BlueprintsQueryProcessor(), new Fields("trackObjects")).each(new Fields("trackObjects"), new TrackObjectOutputter(), new Fields("status"));                
