@@ -108,9 +108,10 @@ public class TallyTopology {
         
         
         TridentState state = stream.each(eventSpout.getOutputFields(), new TrackEventProcessor(), new Fields("trackid", "objectType", "event", "eventuuid")).parallelismHint(2)
-                .groupBy(new Fields("trackid", "objectType")).persistentAggregate(factory, new Fields("event", "trackid", "eventuuid"), new TrackReducer(), new Fields()).parallelismHint(3);
+                .groupBy(new Fields("trackid", "objectType")).persistentAggregate(factory, new Fields("event", "trackid", "eventuuid"), new TrackReducer(), new Fields()).parallelismHint(1);
         
-        tridentTopology.newDRPCStream("trackQuery").each(new Fields("args"), new ObjectTypeQueryProcessor(), new Fields("objectType")).groupBy(new Fields("objectType")).stateQuery(state, new Fields("objectType"), new BlueprintsQueryProcessor(), new Fields("trackObjects")).each(new Fields("trackObjects"), new TrackObjectOutputter(), new Fields("status"));
+        tridentTopology.newDRPCStream("trackQuery").each(new Fields("args"), new ObjectTypeQueryProcessor(), new Fields("objectType")).groupBy(new Fields("objectType")).stateQuery(state, new Fields("objectType"), new BlueprintsQueryProcessor(), new Fields("trackObjects")).each(new Fields("trackObjects"), new TrackObjectOutputter(), new Fields("status"));                
+        
         return tridentTopology.build();
     }
 

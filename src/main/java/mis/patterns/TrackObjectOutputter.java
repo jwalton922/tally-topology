@@ -51,7 +51,7 @@ public class TrackObjectOutputter extends BaseFunction {
         long start = System.currentTimeMillis();
         System.out.println("TrackObjectOutputter excecute called on tuple of size: " + tuple.size());
         log.info("TrackObjectOutputter excecute called on tuple of size: " + tuple.size());
-        
+
         Long currentTime = System.currentTimeMillis();
 //        for (int i = 0; i < tuple.size(); i++) {
 //            if (tuple.get(i) != null) {
@@ -63,10 +63,10 @@ public class TrackObjectOutputter extends BaseFunction {
 
         List<Map<String, Object>> tracks = (List) tuple.get(0);
         List<Map<String, Object>> lastPositionList = new ArrayList<Map<String, Object>>();
-        log.info("There are "+tracks.size()+" tracks to process");
+        log.info("There are " + tracks.size() + " tracks to process");
         for (int i = 0; i < tracks.size(); i++) {
             Map<String, Object> track = tracks.get(i);
-            if(track == null){
+            if (track == null) {
                 log.info("Track is null!");
                 continue;
             }
@@ -75,12 +75,14 @@ public class TrackObjectOutputter extends BaseFunction {
                 log.info("No positions!");
                 continue;
             } else {
-                log.info("Track has "+positions.size()+" positions, last position: "+positions.get(positions.size()-1).toString());
+                log.info("Track has " + positions.size() + " positions, last position: " + positions.get(positions.size() - 1).toString());
             }
 
             Map<String, Object> lastPosition = positions.get(0);
 
             Long lastTime = (Long) lastPosition.get("TIME");
+            Double lat = Double.parseDouble(lastPosition.get("LATITUDE").toString());
+            Double lon = Double.parseDouble(lastPosition.get("LONGITUDE").toString());
 //            Double lat = (Double) position.get("LATITUDE");
 //            Double lon = (Double) position.get("LONGITUDE");
             for (int j = 1; j < positions.size(); j++) {
@@ -88,15 +90,18 @@ public class TrackObjectOutputter extends BaseFunction {
                 if (time > lastTime) {
                     lastPosition = positions.get(j);
                     lastTime = time;
+                    lat = Double.parseDouble(lastPosition.get("LATITUDE").toString());
+                    lon = Double.parseDouble(lastPosition.get("LONGITUDE").toString());
                 }
             }
             //if position is less than 5 minutes old add it;
             long diff = (currentTime - lastTime);
             if (diff < 900000) {
                 log.info("Found a last position");
+                processSchedule(track, lastPosition);
                 lastPositionList.add(lastPosition);
             } else {
-                log.info("diff = "+diff+" currentTime = "+currentTime+" lastTime = "+lastTime);
+                log.info("diff = " + diff + " currentTime = " + currentTime + " lastTime = " + lastTime);
             }
         }
 
@@ -111,6 +116,69 @@ public class TrackObjectOutputter extends BaseFunction {
         //collector.emit(new Values("finished"));
     }
 
+    public void processSchedule(Map<String, Object> track, Map<String, Object> currentPosition) {
+        log.info("process schedule called");
+        if (track.get("SCHEDULE") != null) {
+            List<Map<String, Object>> scheduleList = (List) track.get("SCHEDULE");
+            Long currentTime = (Long) currentPosition.get("TIME");
+            for (int i = 0; i < scheduleList.size(); i++) {
+                //"SCHEDULE":[{"ARRIVAL_TIME":1378824720000,"DEPARTURE_TIME":1378816440000,"DESTINATION":"Arnold Palmer Rgnl (KLBE)","DESTINATION_LONGITUDE":-79.40675,"DESTINATION_LATITUDE":40.27461111111111,"ORIGIN":"Dallas/Fort Worth Intl (KDFW)"}]
+                Map<String, Object> schedule = scheduleList.get(i);
+                Long arrivalTime = (Long) schedule.get("ARRIVAL_TIME");
+                Long departureTime = (Long) schedule.get("DEPARTURE_TIME");
+                if (currentTime < arrivalTime && currentTime > departureTime) {
+                    Double destLat = Double.parseDouble(schedule.get("DESTINATION_LATITUDE").toString());
+                    Double destLon = Double.parseDouble(schedule.get("DESTINATION_LONGITUDE").toString());
+                    Double lat = Double.parseDouble(currentPosition.get("LATITUDE").toString());
+                    Double lon = Double.parseDouble(currentPosition.get("LONGITUDE").toString());
+
+                    double distance = calcDistance(lat, lon, destLat, destLon);
+                    try {
+                        Double speed = Double.parseDouble(currentPosition.get("SPEED").toString());
+                        //speed is in knots
+                        double time = distance / (speed*1.0);
+                        //convert to hours to ms
+                        long timeInMs = (long)(time*60*60*1000);
+                        long timeToArrival = arrivalTime - currentTime;
+                        System.out.println("Time to arrival: "+timeToArrival+" calculated time to arrival: "+timeInMs);
+                        if(timeInMs > timeToArrival){
+                            log.info("FOUND A DELAYED FLIGHT!!!!");
+                            currentPosition.put("DELAYED", true);
+                            currentPosition.put("DELAYED_TIME", (timeInMs - timeToArrival));
+                        } else {
+                            currentPosition.put("DELAYED", false);
+                        }
+                        
+                    } catch (Exception e) {
+                        log.info("Error parsing speed: " + currentPosition.get("SPEED"));
+                    }
+                }
+            }
+        }
+    }
+    public static double EARTH_RADIUS = 6371.0;
+    public static double KM_TO_NMI = 0.53996;
+
+    public double calcDistance(double startLat, double startLon, double endLat, double endLon) {
+        double distance = 0;
+        double deltaLat = toRads((endLat - startLat));
+        double deltaLon = toRads((endLon - startLon));
+
+        double lat1 = toRads(startLat);
+        double lat2 = toRads(endLat);
+
+        double a = Math.sin(deltaLat / 2.0) * Math.sin(deltaLat / 2.0) + Math.sin(deltaLon / 2.0) * Math.sin(deltaLon / 2.0) * Math.cos(lat1) * Math.cos(lat2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        distance = EARTH_RADIUS * c;
+        //convert to NM
+        distance *= KM_TO_NMI;
+
+        return distance;
+    }
+
+    public double toRads(double deg) {
+        return (deg * Math.PI / 180.0);
+    }
 //    public void publishObjects() {
 //        long start = System.currentTimeMillis();
 //        log.debug("publishObjects called");
