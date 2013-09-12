@@ -5,7 +5,6 @@
 package mis.twitter;
 
 import backtype.storm.Config;
-import backtype.storm.LocalCluster;
 import backtype.storm.LocalDRPC;
 import backtype.storm.StormSubmitter;
 import backtype.storm.generated.StormTopology;
@@ -16,14 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import mis.patterns.ObjectTypeQueryProcessor;
-import mis.patterns.TrackEventProcessor;
 import mis.patterns.TrackObjectOutputter;
-import mis.patterns.TrackReducer;
-import mis.tally.topology.TallyTopology;
-import mis.trackeventsimulator.BaseSensor;
-import mis.trackeventsimulator.BoundingBox;
-import mis.trackeventsimulator.BoundingBoxSensor;
-import mis.trackeventsimulator.SimulatorState;
 import mis.trident.blueprints.state.BlueprintsQueryProcessor;
 import mis.trident.blueprints.state.BlueprintsState;
 import mis.trident.blueprints.state.SerializableMongoDBGraph;
@@ -50,10 +42,10 @@ public class TwitterTopology {
         
         
         
-        stream.each(eventSpout.getOutputFields(), new TweetOutputter(), new Fields("tweet")).parallelismHint(3);
+        TridentState tweetState = stream.each(eventSpout.getOutputFields(), new TweetProcessor(), new Fields("userId", "objectType","tweet")).parallelismHint(3).groupBy(new Fields("userId", "objectType")).persistentAggregate(factory, new Fields("userId", "tweet"), new TweetReducer(), new Fields());
 //                .groupBy(new Fields("trackid", "objectType")).persistentAggregate(factory, new Fields("event", "trackid", "eventuuid"), new TrackReducer(), new Fields()).parallelismHint(1);
         
-//        tridentTopology.newDRPCStream("trackQuery").each(new Fields("args"), new ObjectTypeQueryProcessor(), new Fields("objectType")).groupBy(new Fields("objectType")).stateQuery(state, new Fields("objectType"), new BlueprintsQueryProcessor(), new Fields("trackObjects")).each(new Fields("trackObjects"), new TrackObjectOutputter(), new Fields("status"));                
+        tridentTopology.newDRPCStream("twitterQuery").each(new Fields("args"), new ObjectTypeQueryProcessor(), new Fields("objectType")).groupBy(new Fields("objectType")).stateQuery(tweetState, new Fields("objectType"), new BlueprintsQueryProcessor(), new Fields("twitterUsers")).each(new Fields("twitterUsers"), new TwitterUserPersister(), new Fields());                
         
         return tridentTopology.build();
     }

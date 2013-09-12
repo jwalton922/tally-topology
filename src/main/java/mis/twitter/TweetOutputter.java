@@ -52,12 +52,10 @@ public class TweetOutputter extends BaseFunction {
                 JSONObject json = new JSONObject(messageString);
                 System.out.println("Created json object");
                 String text = json.getString("tweet_text").toLowerCase();
-                if (text.indexOf("flight") >= 0) {
+                if (text.indexOf("flight") >= 0 && text.indexOf("delay") >= 0) {
                     Jedis jedis = jedisPool.getResource();
                     Long numClients = jedis.publish("FLIGHT_DELAY_TWEET", messageString);
                     jedisPool.returnResource(jedis);
-                } else {
-                    log.info("Tweet was not about flight delay");
                 }
 //                Iterator keyIt = json.keys();
 //                while (keyIt.hasNext()) {
